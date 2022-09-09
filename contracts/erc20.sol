@@ -5,9 +5,8 @@ import "./IERC20.sol";
 
 contract iUseArchBtwERC20Token is IERC20 {
     
-    struct ballot{
-        address voter;
-        address candidate;
+    struct Ballot{
+        address voter;  
         bool vote;
     }
 
@@ -17,8 +16,8 @@ contract iUseArchBtwERC20Token is IERC20 {
     address[] public owners;
     mapping(address => ballot[]) public poll;
 
-    bool public votingStatus;
-    address public candidate = address(0);
+    bool private votingStatus;
+    address private candidate = address(0);
 
     string public name;
     string public symbol;
@@ -40,22 +39,22 @@ contract iUseArchBtwERC20Token is IERC20 {
 /*/////
 owning functionality
 *//////
-
-    function countOwners() returns (uint256){   
-        address
+    
+    function changeStatus() external view returns(string memory){
+        
     }
 
-    function countVotes() internal returns (uint256 ){
+    function countVotes(address _candidate) external returns (uint256 ){
 
     }
 
-    function vote() public {
-        //sets voted for and checks if there's enough votes
+    function vote() public { //creates ballot and checks if there's enough votes
+        Ballot memory ownerBallot = new Ballot(msg.sender, candidate); 
     }
 
 
-    function wantToOwn() external {
-
+    function wantToOwn() external onlyOwner {
+        candidate = msg.sender;
     }
 
 
@@ -64,7 +63,24 @@ owning functionality
 custom modifiers
 *//////  
 
+    modifier candidateIsNotZero(){
+        requie(candidate != address(0), 'Voting is over');
+        _;
+    }
 
+    modifier candidateIsZero(){
+        require(candidate == address(0), "Voting is on");
+        _;
+    }
+
+    modifier onlyOwner(){
+        address compare;
+        for (i = 0; i < owners.length; i++){
+            if (msg.sender == owners[i]) { compare = owners[i]; break; }
+            }
+        require(msg.sender == compare, "Only owners can vote");
+        _;
+    }
 
 /*/////
 miscellaneous functions 
