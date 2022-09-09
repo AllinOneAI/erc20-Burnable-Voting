@@ -20,13 +20,22 @@ contract iUseArchBtwERC20Token is IERC20 {
     bool public votingStatus;
     address public candidate = address(0);
 
-    string public name = "I Use Arch Btw";
-    string public symbol = "IUAB";
-    uint8 public decimals = 18;
-    uint public totalSupply = 1000^decimals;   
+    string public name;
+    string public symbol;
+    uint8 public decimals;
+    uint public totalSupply;   
 
  
-
+    constructor () {
+        
+        name = "I Use Arch Btw";
+        symbol = "IUAB";
+        decimals = 18;
+        totalSupply = 1000^decimals;
+        balanceOf[msg.sender] = totalSupply;
+        owners.push(msg.sender);
+        
+    }
 
 /*/////
 owning functionality
