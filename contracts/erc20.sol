@@ -14,7 +14,7 @@ contract iUseArchBtwERC20Token is IERC20 {
     mapping(address => mapping(address => uint)) public allowance;
 
     address[] public owners;
-    mapping(address => ballot[]) public poll;
+    mapping(address => Ballot[]) public poll;
 
     bool private votingStatus;
     address private candidate = address(0);
@@ -23,10 +23,12 @@ contract iUseArchBtwERC20Token is IERC20 {
     string public symbol;
     uint8 public decimals;
     uint public totalSupply;   
+   uint256 public afterTime;  
 
  
     constructor () {
-        
+       
+        afterTime = block.timestamp + 3 minutes;   
         name = "I Use Arch Btw";
         symbol = "IUAB";
         decimals = 18;
@@ -41,7 +43,7 @@ owning functionality
 *//////
     
     function decision() internal{
-        int256 half = owners.length / 2;
+        int256 half = int256(owners.length) / 2;
         int256 counted = countVotes();
         if (counted > half){
             owners.push(candidate);
@@ -49,10 +51,10 @@ owning functionality
         }
     }
 
-    function countVotes() internal returns (int256){
+    function countVotes() internal view returns (int256){
         int256 result = 0;
         for (uint256 i = 0; i < poll[candidate].length; i++) {
-           if (poll[candidate][i] = true){result++;}
+           if (poll[candidate][i].vote == true){result++;}
            else {result--;}
         }
         return result;
@@ -74,12 +76,20 @@ owning functionality
 /*/////
 custom modifiers
 *//////  
-    
+   
+     modifier canBurn() {
+        require(block.timestamp > afterTime, "It's not time yet");           // this modifier checks if it's enough time passed since deployment of the contract, so you can burn your tokens 
+        _;
+     }
+
     modifier notOwner() {
         address compare;
         for (uint256 i = 0; i < owners.length; i++){
-            if (msg.sender == owners[i]) { compare = owners[i]; break; }
+            if (msg.sender == owners[i]) {
+                compare = owners[i];
+                break;
             }
+        }
         require(msg.sender != compare, "You are an owner already!");
         _;
     }
@@ -97,7 +107,7 @@ custom modifiers
 
     modifier onlyOwner(){
         address compare;
-        for (i = 0; i < owners.length; i++){
+        for (uint256 i = 0; i < owners.length; i++){
             if (msg.sender == owners[i]) { compare = owners[i]; break; }
             }
         require(msg.sender == compare, "Only owners can vote");
@@ -143,7 +153,7 @@ core functions
         emit Transfer(address(0), msg.sender, amount);
     }
 
-    function burn(uint amount) external {
+    function burn(uint amount) external canBurn{
         balanceOf[msg.sender] -= amount;
         totalSupply -= amount;
         emit Transfer(msg.sender, address(0), amount);
