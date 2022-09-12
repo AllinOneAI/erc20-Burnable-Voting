@@ -40,20 +40,32 @@ contract iUseArchBtwERC20Token is IERC20 {
 owning functionality
 *//////
     
-    function changeStatus() external view returns(string memory){
-        
+    function decision() internal{
+        int256 half = owners.length / 2;
+        int256 counted = countVotes();
+        if (counted > half){
+            owners.push(candidate);
+            candidate = address(0);
+        }
     }
 
-    function countVotes(address _candidate) external returns (uint256 ){
-
+    function countVotes() internal returns (int256){
+        int256 result = 0;
+        for (uint256 i = 0; i < poll[candidate].length; i++) {
+           if (poll[candidate][i] = true){result++;}
+           else {result--;}
+        }
+        return result;
     }
 
-    function vote() public { //creates ballot and checks if there's enough votes
-        Ballot memory ownerBallot = new Ballot(msg.sender, candidate); 
+    function vote(bool _vote) external onlyOwner candidateIsNotZero { //creates ballot and checks if there's enough votes
+      //  Ballot memory ownerBallot = Ballot(msg.sender, vote);
+        poll[candidate].push(Ballot(msg.sender, _vote));
+        decision();
     }
 
 
-    function wantToOwn() external onlyOwner {
+    function wantToOwn() external notOwner candidateIsZero {
         candidate = msg.sender;
     }
 
@@ -62,9 +74,19 @@ owning functionality
 /*/////
 custom modifiers
 *//////  
+    
+    modifier notOwner() {
+        address compare;
+        for (uint256 i = 0; i < owners.length; i++){
+            if (msg.sender == owners[i]) { compare = owners[i]; break; }
+            }
+        require(msg.sender != compare, "You are an owner already!");
+        _;
+    }
+
 
     modifier candidateIsNotZero(){
-        requie(candidate != address(0), 'Voting is over');
+        require(candidate != address(0), 'Voting is over');
         _;
     }
 
@@ -115,7 +137,7 @@ core functions
         return true;
     }
 
-    function mint(uint amount) external {
+    function mint(uint amount) external onlyOwner{
         balanceOf[msg.sender] += amount;
         totalSupply += amount;
         emit Transfer(address(0), msg.sender, amount);
