@@ -13,17 +13,18 @@ contract iUseArchBtwERC20Token is IERC20 {
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint)) public allowance;
 
-    address[] public owners;
-    mapping(address => Ballot[]) public poll;
+    mapping(address => Ballot[]) public poll;                           //history of all polls mapped to every candidate, that has ever been; 
+    mapping(address => bool) public owners;                             // mapping of all owners
+    uint256 public ownersCount;                                         // counter of current owners. needed for votes counting                         
 
-    bool private votingStatus;
-    address private candidate = address(0);
+ 
+    address public candidate = address(0);                              //current candidate to vote for; if = zero addr, there's no voting now
 
     string public name;
     string public symbol;
     uint8 public decimals;
     uint public totalSupply;   
-   uint256 public afterTime;  
+    uint256 public afterTime;  
 
  
     constructor () {
@@ -34,7 +35,8 @@ contract iUseArchBtwERC20Token is IERC20 {
         decimals = 18;
         totalSupply = 1000^decimals;
         balanceOf[msg.sender] = totalSupply;
-        owners.push(msg.sender);
+        owners[msg.sender] = true;
+        ownersCount = 1;                                                //contract deployer is it's firs owner, so incrementing ownerCount
         
     }
 
@@ -42,28 +44,40 @@ contract iUseArchBtwERC20Token is IERC20 {
 owning functionality
 *//////
     
-    function decision() internal{
-        int256 half = int256(owners.length) / 2;
-        int256 counted = countVotes();
-        if (counted > half){
-            owners.push(candidate);
-            candidate = address(0);
-        }
-    }
 
-    function countVotes() internal view returns (int256){
-        int256 result = 0;
-        for (uint256 i = 0; i < poll[candidate].length; i++) {
-           if (poll[candidate][i].vote == true){result++;}
-           else {result--;}
-        }
-        return result;
-    }
-
-    function vote(bool _vote) external onlyOwner candidateIsNotZero { //creates ballot and checks if there's enough votes
-      //  Ballot memory ownerBallot = Ballot(msg.sender, vote);
+    function vote(bool _vote) external onlyOwner candidateIsNotZero {   //creates ballot and calls decision function
         poll[candidate].push(Ballot(msg.sender, _vote));
         decision();
+    }
+    
+
+    function countVotes() internal view returns (int256 pos, int256 neg) {   //counting all votes for current candidate
+        pos = 0;
+        neg = 0;
+        for (uint256 i = 0; i < poll[candidate].length; i++) {
+           if (poll[candidate][i].vote == true){pos++;}
+           else {neg++;}
+        }
+        return (pos, neg);
+    }
+
+
+    function decision() internal {                                          //decision function, that's called every time, someone voting for current candidate
+        int256 pos;
+        int256 neg;
+        int256 half = int256(ownersCount) / 2;
+        (pos, neg) = countVotes();
+        int256 result = pos - neg;
+        if (result > half) {
+            addOwner();
+        }
+    }
+
+
+    function addOwner() internal {                                          //adding candidate in case there's enough positive votes
+        owners[candidate] = true;
+        ownersCount++;
+        candidate = address(0);
     }
 
 
@@ -82,35 +96,24 @@ custom modifiers
         _;
      }
 
-    modifier notOwner() {
-        address compare;
-        for (uint256 i = 0; i < owners.length; i++){
-            if (msg.sender == owners[i]) {
-                compare = owners[i];
-                break;
-            }
-        }
-        require(msg.sender != compare, "You are an owner already!");
+    modifier notOwner() {                                                   //checking if msg.sender is not an owner already
+        require(owners[msg.sender] == false, "You are already an owner");
         _;
     }
 
 
-    modifier candidateIsNotZero(){
-        require(candidate != address(0), 'Voting is over');
+    modifier candidateIsNotZero(){                                          //requirement for candidate's address to not to be zero
+        require(candidate != address(0), "Voting is over");
         _;
     }
 
-    modifier candidateIsZero(){
+    modifier candidateIsZero(){                                              //requirement for candidate's address to be zero
         require(candidate == address(0), "Voting is on");
         _;
     }
 
     modifier onlyOwner(){
-        address compare;
-        for (uint256 i = 0; i < owners.length; i++){
-            if (msg.sender == owners[i]) { compare = owners[i]; break; }
-            }
-        require(msg.sender == compare, "Only owners can vote");
+        require(owners[msg.sender] == true, "Only owners can vote");
         _;
     }
 
